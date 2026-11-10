@@ -1,64 +1,45 @@
-# ============================================================
-# Nom du workflow (affiché dans l'onglet "Actions" de GitHub)
-# ============================================================
 name: CI/CD Pipeline
 
-# ============================================================
-# DÉCLENCHEURS (Events)
-# - un push sur la branche main
-# - une pull request qui cible main
-# ============================================================
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
-# ============================================================
-# JOBS (tâches)
-# ============================================================
 jobs:
-  # ----------------------------------------------------------
-  # JOB 1 : Tests
-  # ----------------------------------------------------------
   test:
-    # Runner : machine Ubuntu fournie par GitHub
     runs-on: ubuntu-latest
     steps:
-      # 1. Récupère le code du dépôt sur le runner
       - name: Récupérer le code
         uses: actions/checkout@v4
 
-      # 2. Installe Python 3.12 avec le cache pip
       - name: Installer Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
 
-      # 3. Installe les dépendances
       - name: Installer les dépendances
         run: pip install -r requirements.txt
 
-      # 4. Lance les tests (si échec -> job en erreur)
+      # Linting : vérifie le style du code sans l'exécuter
+      - name: Vérifier le style avec flake8
+        run: |
+          pip install flake8
+          flake8 app.py --max-line-length=88
+
       - name: Lancer les tests
         run: pytest -q
 
-  # ----------------------------------------------------------
-  # JOB 2 : Build Docker (seulement si "test" réussit)
-  # ----------------------------------------------------------
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      # 1. Récupère le code (chaque job a son propre runner vierge)
       - name: Récupérer le code
         uses: actions/checkout@v4
 
-      # 2. Construit l'image Docker taguée avec le SHA du commit
       - name: Construire l'image Docker
         run: docker build -t myapp:${{ github.sha }} .
 
-      # 3. Message de confirmation
       - name: Confirmer le build
         run: echo "Image construite avec le tag myapp:${GITHUB_SHA}"
